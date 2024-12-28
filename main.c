@@ -1,14 +1,12 @@
-#include <stdio.h>
 #include <windows.h>
 #include <math.h>
 #define PI 3.1415926535f
-#define P2 PI/2
-#define P3 3*PI/2
+#define P2 (PI/2)
+#define P3 (3*PI/2)
+#define DR 0.0174533f // 1 degree in radians
 
-//player position
-int px = 312;
-int py = 312;
-float pdx,pdy,pa; // deltax,y and player angle
+float px = 312,py=312; //player position
+float pdx,pdy,pa; // delta x,y and player angle
 
 //map size
 int mapX = 8, mapY=8,mapSize=64;
@@ -25,21 +23,22 @@ int map[] =
         };
 
 float dist(float ax, float ay, float bx, float by, float ang){
-    return (sqrt((bx-ax)*(bx-ax) + (by-ay)*(by-ay)));
+    return (sqrtf((bx-ax)*(bx-ax) + (by-ay)*(by-ay)));
 }
 
 void drawRays(HDC hdc) {
     int mx, my, mp, dof;
-    float rx, ry, ra, xo, yo;
-    ra = pa;
-    for (int r = 0; r < 1; r++) {
-
+    float rx, ry, ra, xo, yo, disT;
+    ra = pa-DR*30; //rays angle = players angle
+    if(ra<0){ra+=2*PI;}
+    if(ra>2*PI){ra-=2*PI;}
+    for (int r = 0; r < 60; r++) {
         // Check Horizontal Lines
         dof=0;
         float disH = 1000000,hx=px,hy=py;
-        float aTan=-1/tan(ra);
-        if(ra>PI){ry=(((int)py>>6)<<6)-0.0001; rx=(py-ry)*aTan+px;yo=-64;xo=-yo*aTan;}
-        if(ra<PI){ry=(((int)py>>6)<<6)+64; rx=(py-ry)*aTan+px;yo=64;xo=-yo*aTan;}
+        float aTan=-1/tanf(ra);
+        if(ra>PI){ry=(((int)py/64)*64)-0.0001; rx=(py-ry)*aTan+px;yo=-64;xo=-yo*aTan;} // ray is looking up
+        if(ra<PI){ry=(((int)py/64)*64)+64;     rx=(py-ry)*aTan+px;yo= 64;xo=-yo*aTan;} // ray is looking down
         if(ra==0 || ra==PI)
         {
             rx=px;
@@ -48,8 +47,8 @@ void drawRays(HDC hdc) {
         }
         while(dof<8)
         {
-            mx=(int)(rx)>>6;
-            my=(int)(ry)>>6;
+            mx=(int)(rx)/64;
+            my=(int)(ry)/64;
             mp=my*mapX+mx;
             if(mp>0 && mp<mapX*mapY && map[mp]==1)
             {
@@ -63,18 +62,19 @@ void drawRays(HDC hdc) {
                 dof+=1;
             }
         }
+
         // Check Vertical Lines
         dof = 0;
         float disV = 1000000,vx=px,vy=py;
-        float nTan = -tan(ra);
+        float nTan = -tanf(ra);
         if (ra > P2 && ra < P3) {
-            rx = (((int) px >> 6) << 6) - 0.0001;
+            rx = (((int) px / 64) * 64) - 0.0001;
             ry = (px - rx) * nTan + py;
             xo = -64;
             yo = -xo * nTan;
         }
         if (ra < P2 || ra > P3) {
-            rx = (((int) px >> 6) << 6) + 64;
+            rx = (((int) px / 64) * 64) + 64;
             ry = (px - rx) * nTan + py;
             xo = 64;
             yo = -xo * nTan;
@@ -85,8 +85,8 @@ void drawRays(HDC hdc) {
             dof = 8;
         }
         while (dof < 8) {
-            mx = (int) (rx) >> 6;
-            my = (int) (ry) >> 6;
+            mx = (int) (rx) / 64;
+            my = (int) (ry) / 64;
             mp = my * mapX + mx;
             if (mp>0 && mp < mapX * mapY && map[mp] == 1) {
                 vx=rx;
@@ -99,8 +99,9 @@ void drawRays(HDC hdc) {
                 dof += 1;
             }
         }
-        if(disV<disH){rx = vx; ry=vy;}
-        if(disH<disV){rx = hx; ry=hy;}
+        int color = RGB(0,255,0);
+        if(disV<disH){rx = vx; ry=vy; disT=disV; color = RGB(0,200,0);}
+        if(disH<disV){rx = hx; ry=hy; disT=disH; color = RGB(0,150,0);}
 
         HPEN hPen1 = CreatePen(PS_SOLID, 2, RGB(0, 255, 0));
         HPEN oldPen1 = (HPEN) SelectObject(hdc, hPen1);
@@ -108,6 +109,24 @@ void drawRays(HDC hdc) {
         LineTo(hdc, rx, ry);
         SelectObject(hdc, oldPen1);
         DeleteObject(hPen1);
+
+        //draw 3D
+        float ca = pa-ra;
+        if(ca<0){ca+=2*PI;}
+        if(ca>2*PI){ca-=2*PI;}
+        disT*=cosf(ca); //fix fish eye
+        float lineH = (mapSize*320)/disT; if(lineH > 320){lineH = 320;} //line height
+        float lineO = 160 - lineH/2; //line offset
+
+        HPEN hPen2 = CreatePen(PS_SOLID, 2, color);
+        HPEN oldPen2 = (HPEN) SelectObject(hdc, hPen2);
+        MoveToEx(hdc, r*8+530, lineO, NULL);
+        LineTo(hdc, r*8+530, lineH+lineO);
+        SelectObject(hdc, oldPen2);
+        DeleteObject(hPen2);
+        ra+=DR;
+        if(ra<0){ra+=2*PI;}
+        if(ra>2*PI){ra-=2*PI;}
     }
 }
 
@@ -149,8 +168,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     if(pa<0){
                         pa+=2*PI;
                     }
-                    pdx=cos(pa)*5;
-                    pdy=sin(pa)*5;
+                    pdx=cosf(pa)*5;
+                    pdy=sinf(pa)*5;
                     break;
                 case 'S':
                     //py+=mapY;
@@ -163,8 +182,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                     if(pa>2*PI){
                         pa-=2*PI;
                     }
-                    pdx=cos(pa)*5;
-                    pdy=sin(pa)*5;
+                    pdx=cosf(pa)*5;
+                    pdy=sinf(pa)*5;
                     break;
                 default:
                     break;
@@ -176,8 +195,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             HDC hdcMem = CreateCompatibleDC(hdc);
-            pdx = cos(pa)*5;
-            pdy = sin(pa)*5;
+            pdx = cosf(pa)*5;
+            pdy = sinf(pa)*5;
             if (!hBitmap) {
                 RECT clientRect;
                 GetClientRect(hWnd, &clientRect);
@@ -208,7 +227,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 255, 0));
             HPEN oldPen = (HPEN)SelectObject(hdcMem, hPen);
             MoveToEx(hdcMem, px, py, NULL);
-            LineTo(hdcMem, px + pdx * 10, py + pdy * 10);
+            LineTo(hdcMem, px + pdx * 5, py + pdy * 5);
             SelectObject(hdcMem, oldPen);
             DeleteObject(hPen);
 
@@ -244,7 +263,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             "Raycaster",
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, CW_USEDEFAULT,
-            800, 600,
+            1000, 600,
             NULL,
             NULL,
             hInstance,
