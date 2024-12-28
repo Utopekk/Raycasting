@@ -10,6 +10,7 @@ float pdx,pdy,pa; // delta x,y and player angle
 
 //map size
 int mapX = 8, mapY=8,mapSize=64;
+// 1 is a wall
 int map[] =
         {
         1,1,1,1,1,1,1,1,
@@ -223,7 +224,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             FillRect(hdcMem,&player,pBrush);
             DeleteObject(pBrush);
 
-            //Line
+            //line
             HPEN hPen = CreatePen(PS_SOLID, 2, RGB(0, 255, 0));
             HPEN oldPen = (HPEN)SelectObject(hdcMem, hPen);
             MoveToEx(hdcMem, px, py, NULL);
