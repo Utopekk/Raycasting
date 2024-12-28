@@ -10,7 +10,7 @@ raycaster
 ```
 
 # Moving
-W - Up\n
-S - Down
-A - turn left
-D - turn right
+W - U<br>
+S - Down<br>
+A - turn left<br>
+D - turn right<br>
