@@ -12,5 +12,5 @@ raycaster
 # Moving
 W - U<br>
 S - Down<br>
-A - turn left<br>
-D - turn right<br>
+A - Turn left<br>
+D - Turn right<br>
