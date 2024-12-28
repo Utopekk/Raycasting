@@ -8,3 +8,9 @@ This is a simple raycaster project written in C using window.h
 gcc main.c -lgdi32 -o raycaster
 raycaster
 ```
+
+# Moving
+W - Up
+S - Down
+A - turn left
+D - turn right
